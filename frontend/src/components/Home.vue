@@ -1,17 +1,18 @@
+<!-- src/components/Home.vue -->
 <template>
-  <div>
+  <div class="container home-page">
     <h1>📦 我的庫存系統</h1>
     <p>請選擇要進行的功能：</p>
     <div class="button-group">
-      <el-button type="primary" @click="$router.push('/products')">
+      <button class="custom-btn primary" @click="$router.push('/products')">
         商品庫存管理
-      </el-button>
-      <el-button type="success" @click="$router.push('/add')">
+      </button>
+      <button class="custom-btn success" @click="$router.push('/add')">
         新增商品
-      </el-button>
-      <el-button type="danger" @click="handleLogout">
+      </button>
+      <button class="custom-btn danger" @click="handleLogout">
         登出
-      </el-button>
+      </button>
     </div>
   </div>
 </template>
@@ -30,30 +31,42 @@ function handleLogout() {
 </script>
 
 <style scoped>
-h1 {
-  font-size: 2.2rem;
-  margin-bottom: 1rem;
-}
-
-p {
-  margin-bottom: 2rem;
-  font-size: 1.1rem;
+.home-page {
+  text-align: center;
 }
 
 .button-group {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 20px;
+  margin-top: 40px;
 }
 
-.el-button {
+.custom-btn {
   width: 100%;
-  padding: 12px 0;
+  padding: 14px 0;
   font-size: 1.1rem;
-  transition: transform 0.1s ease;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: transform 0.1s ease, filter 0.1s ease;
 }
 
-.el-button:hover {
+.custom-btn.primary {
+  background-color: #409eff;
+}
+
+.custom-btn.success {
+  background-color: #67c23a;
+}
+
+.custom-btn.danger {
+  background-color: #f56c6c;
+}
+
+.custom-btn:hover {
   transform: scale(1.02);
+  filter: brightness(1.05);
 }
 </style>
