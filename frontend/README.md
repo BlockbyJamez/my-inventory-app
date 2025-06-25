@@ -1,5 +1,29 @@
-# Vue 3 + Vite
+# 📦 我的庫存系統 (My Inventory System)
 
-This template should help get you started developing with Vue 3 in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+這是一個簡易的商品庫存管理系統，採用 **Vue 3 + Express + RESTful API** 架構開發，前後端分離，支援商品圖片上傳與庫存資料維護，適合作為前端 / 全端學習實戰或作品集展示。
 
-Learn more about IDE Support for Vue in the [Vue Docs Scaling up Guide](https://vuejs.org/guide/scaling-up/tooling.html#ide-support).
+---
+
+## 🧰 使用技術
+
+| 區塊 | 技術                                     |
+| ---- | ---------------------------------------- |
+| 前端 | Vue 3, Element Plus, Pinia, Axios        |
+| 後端 | Node.js, Express                         |
+| 工具 | concurrently, multer (圖片上傳), nodemon |
+
+---
+
+## 📸 功能介紹
+
+- 商品列表與圖片顯示
+- 商品新增 / 編輯 / 刪除
+- 支援圖片上傳與預覽
+- 依名稱模糊搜尋
+- 分頁顯示 (5 筆/頁)
+- 欄位排序功能（價格、分類、ID 等）
+- 前後端同時啟動 (`npm run dev`)
+
+---
+
+## 📂 專案結構
