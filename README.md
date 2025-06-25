@@ -28,11 +28,13 @@
 
 ## 📂 專案結構
 
+```
 my-inventory-app/
 ├── backend/ # Express API
 ├── frontend/ # Vue 3 SPA
 ├── node_modules/
 ├── package.json # 專案啟動設定
 └── README.md
+```
 
 ---
