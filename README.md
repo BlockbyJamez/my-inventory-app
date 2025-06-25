@@ -34,3 +34,5 @@ my-inventory-app/
 ├── node_modules/
 ├── package.json # 專案啟動設定
 └── README.md
+
+---
