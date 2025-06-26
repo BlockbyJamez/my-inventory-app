@@ -142,6 +142,53 @@ app.post("/upload", upload.single('image'), (req, res) => {
   res.json({ imageUrl });
 });
 
+// ✅ 登入 API（帳號密碼驗證）
+app.post('/api/login', (req, res) => {
+  const { username, password } = req.body;
+
+  if (!username || !password) {
+    return res.status(400).json({ error: '帳號與密碼不得為空' });
+  }
+
+  db.get(
+    `SELECT * FROM users WHERE username = ? AND password = ?`,
+    [username, password],
+    (err, row) => {
+      if (err) {
+        return res.status(500).json({ error: '伺服器錯誤' });
+      }
+
+      if (row) {
+        return res.json({ success: true, username: row.username });
+      } else {
+        return res.status(401).json({ error: '帳號或密碼錯誤' });
+      }
+    }
+  );
+});
+
+// ✅ 註冊 API（新增使用者）
+app.post('/api/register', (req, res) => {
+  const { username, password } = req.body;
+
+  if (!username || !password) {
+    return res.status(400).json({ error: '帳號與密碼不得為空' });
+  }
+
+  const sql = `INSERT INTO users (username, password) VALUES (?, ?)`;
+
+  db.run(sql, [username, password], function (err) {
+    if (err) {
+      if (err.message.includes('UNIQUE constraint failed')) {
+        return res.status(409).json({ error: '帳號已存在' });
+      }
+      return res.status(500).json({ error: '伺服器錯誤' });
+    }
+
+    return res.status(201).json({ success: true, userId: this.lastID });
+  });
+});
+
 // 啟動 Server
 app.listen(port, () => {
   console.log(`✅ Backend running with SQLite + file upload on http://localhost:${port}`);
