@@ -1,7 +1,42 @@
 <template>
+
   <div class="container product-list-page">
     <!-- ✅ Page Header -->
-    <el-page-header content="商品庫存管理" @back="goBack" />
+    <el-page-header content="📊 商品庫存管理" @back="goBack" />
+
+    <!-- ✅ 統計卡片 -->
+    <div class="stat-cards">
+      <div class="stat-card">
+        <div class="stat-title">📦 商品總數</div>
+        <div class="stat-value">{{ stats.totalProducts }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-title">🧮 庫存總數</div>
+        <div class="stat-value">{{ stats.totalStock }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-title">💰 庫存總價值</div>
+        <div class="stat-value">{{ stats.totalValue.toLocaleString() }} 元</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-title">🏷️ 分類數量</div>
+        <div class="stat-value">{{ Object.keys(stats.categoryCounts).length }}</div>
+      </div>
+    </div>
+
+    <!-- ✅ 可折疊分類明細 -->
+    <details class="category-summary">
+      <summary>🏷️ 分類統計（共 {{ Object.keys(stats.categoryCounts).length }} 類）</summary>
+      <div class="category-list">
+        <span
+          v-for="(count, category) in stats.categoryCounts"
+          :key="category"
+          class="category-chip"
+        >
+          {{ category }} ({{ count }})
+        </span>
+      </div>
+    </details>
 
     <!-- ✅ 搜尋 + 新增 -->
     <div class="action-bar">
@@ -11,6 +46,19 @@
         clearable
         class="search-input"
       />
+      <el-select
+        v-model="selectedCategory"
+        placeholder="📂 篩選分類"
+        clearable
+        class="category-select"
+      >
+        <el-option
+          v-for="category in categoryOptions"
+          :key="category"
+          :label="category"
+          :value="category"
+        />
+      </el-select>
       <el-button type="primary" @click="goToAdd">
         ➕ 新增商品
       </el-button>
@@ -24,7 +72,7 @@
       @sort-change="handleSortChange"
     >
       <el-table-column prop="id" label="ID" width="80" sortable />
-      <el-table-column label="圖片" width="120">
+      <el-table-column label="圖片" width="120" align="center" header-align="center">
         <template #default="scope">
           <img
             :src="scope.row.image || 'https://via.placeholder.com/100'"
@@ -118,25 +166,36 @@ const store = useProductStore();
 const products = computed(() => store.products);
 
 const searchText = ref("");
+const selectedCategory = ref("");
 const currentPage = ref(1);
 const pageSize = ref(5);
 
-// ✅ 排序狀態：預設以 ID 升序
 const defaultSort = ref({ prop: "id", order: "ascending" });
 const currentSort = ref({ ...defaultSort.value });
 
-// ✅ 排序 + 過濾後的資料
+// ✅ 分類選項
+const categoryOptions = computed(() => {
+  const categories = new Set(products.value.map((p) => p.category));
+  return Array.from(categories);
+});
+
+// ✅ 篩選 + 排序
 const sortedAndFiltered = computed(() => {
   let list = [...products.value];
 
-  // 過濾
+  // 🔍 名稱過濾
   if (searchText.value) {
     list = list.filter((p) =>
       p.name.toLowerCase().includes(searchText.value.toLowerCase())
     );
   }
 
-  // 排序
+  // 📂 分類過濾
+  if (selectedCategory.value) {
+    list = list.filter((p) => p.category === selectedCategory.value);
+  }
+
+  // ⬆⬇ 排序
   if (currentSort.value.prop && currentSort.value.order !== null) {
     const prop = currentSort.value.prop;
     const order = currentSort.value.order === "ascending" ? 1 : -1;
@@ -150,13 +209,11 @@ const sortedAndFiltered = computed(() => {
   return list;
 });
 
-// ✅ 當前分頁
 const paginatedData = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value;
   return sortedAndFiltered.value.slice(start, start + pageSize.value);
 });
 
-// ✅ 監聽排序事件
 function handleSortChange({ prop, order }) {
   currentSort.value = { prop, order };
 }
@@ -174,6 +231,26 @@ const editForm = ref({
 
 onMounted(() => {
   store.fetchProducts();
+});
+
+const stats = computed(() => {
+  const list = sortedAndFiltered.value;
+  const totalProducts = list.length;
+  const totalStock = list.reduce((sum, p) => sum + (p.stock || 0), 0);
+  const totalValue = list.reduce((sum, p) => sum + ((p.stock || 0) * (p.price || 0)), 0);
+
+  const categoryCounts = {};
+  list.forEach((p) => {
+    const cat = p.category || "未分類";
+    categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+  });
+
+  return {
+    totalProducts,
+    totalStock,
+    totalValue,
+    categoryCounts,
+  };
 });
 
 function goBack() {
@@ -221,6 +298,17 @@ function handleUploadSuccess(response) {
 </script>
 
 <style scoped>
+/* ✅ 強化 page-header 樣式 */
+.el-page-header {
+  margin-bottom: 30px; /* 與統計卡片拉開距離 */
+}
+
+.el-page-header__content {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #1f1f1f;
+}
+
 .action-bar {
   display: flex;
   justify-content: space-between;
@@ -235,9 +323,76 @@ function handleUploadSuccess(response) {
   max-width: 300px;
 }
 
+.category-select {
+  flex: 1 1 200px;
+  max-width: 220px;
+}
+
 .product-table {
   width: 100%;
   margin-bottom: 30px;
+}
+
+.stat-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background-color: #f9fafc;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+  text-align: center;
+  border: 1px solid #e0e0e0;
+}
+
+.stat-title {
+  font-size: 0.95rem;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-size: 1.4rem;
+  font-weight: bold;
+  color: #333;
+}
+
+
+.category-summary {
+  margin: 20px 0 30px;
+  font-size: 1rem;
+  color: #444;
+}
+
+.category-summary summary {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 8px 0;
+  list-style: none;
+}
+
+.category-summary summary::-webkit-details-marker {
+  display: none;
+}
+
+.category-list {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-left: 1.5rem;
+}
+
+.category-chip {
+  background-color: #fff3e0;
+  padding: 6px 12px;
+  border-radius: 16px;
+  border: 1px solid #ffc107;
+  font-weight: 500;
 }
 
 .thumbnail {
