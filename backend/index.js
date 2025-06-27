@@ -6,6 +6,7 @@ import sqlite3 from "sqlite3";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import nodemailer from "nodemailer";
 
 sqlite3.verbose();
 
@@ -169,15 +170,15 @@ app.post('/api/login', (req, res) => {
 
 // ✅ 註冊 API（新增使用者）
 app.post('/api/register', (req, res) => {
-  const { username, password } = req.body;
+  const { username, password, email } = req.body;
 
-  if (!username || !password) {
-    return res.status(400).json({ error: '帳號與密碼不得為空' });
+  if (!username || !password || !email) {
+    return res.status(400).json({ error: '帳號、密碼與信箱不得為空' });
   }
 
-  const sql = `INSERT INTO users (username, password) VALUES (?, ?)`;
+  const sql = `INSERT INTO users (username, password, email, role) VALUES (?, ?, ?, 'viewer')`;
 
-  db.run(sql, [username, password], function (err) {
+  db.run(sql, [username, password, email], function (err) {
     if (err) {
       if (err.message.includes('UNIQUE constraint failed')) {
         return res.status(409).json({ error: '帳號已存在' });
@@ -187,6 +188,138 @@ app.post('/api/register', (req, res) => {
 
     return res.status(201).json({ success: true, userId: this.lastID });
   });
+});
+
+// ✅ 加在 index.js 中
+app.post('/api/forgot-password', (req, res) => {
+  const { identifier } = req.body;
+  console.log("🟡 收到重設密碼請求：", identifier);
+
+  if (!identifier) {
+    console.log("🔴 沒有提供帳號");
+    return res.status(400).json({ error: '請提供帳號' });
+  }
+
+  db.get(`SELECT * FROM users WHERE username = ?`, [identifier], (err, user) => {
+    if (err) {
+      console.error("❌ 查詢帳號失敗", err);
+      return res.status(500).json({ error: '伺服器錯誤' });
+    }
+
+    if (!user) {
+      console.warn("⚠️ 查無帳號", identifier);
+      return res.status(404).json({ error: '查無此帳號' });
+    }
+
+    // ✅ 產生 6 位數驗證碼
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires = Date.now() + 60 * 1000; 
+
+    // ✅ 設定 Gmail 發信
+    const nodemailer = require('nodemailer'); 
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: "danny90628@gmail.com",   
+        pass: "dnndvufcudqjdckn"      
+      }
+    });
+
+    const mailOptions = {
+      from: "danny90628@gmail.com",
+      to: user.email,
+      subject: "密碼重設驗證碼",
+      text: `您好，您的驗證碼為：${code}，1 分鐘內有效。`
+    };
+
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.error("❌ 無法寄出驗證碼", error);
+        return res.status(500).json({ error: "寄信失敗" });
+      }
+
+      console.log("📧 驗證碼已寄出：", info.response);
+
+      // ✅ 更新 DB 中的 reset_token & reset_expires
+      db.run(
+        `UPDATE users SET email_verification_code = ?, email_code_expires = ? WHERE id = ?`,
+        [code, expires, user.id],
+        (err) => {
+          if (err) {
+            console.error("❌ 無法寫入驗證碼", err);
+            return res.status(500).json({ error: "驗證碼儲存失敗" });
+          }
+
+          res.json({ message: "已發送驗證碼至註冊信箱" });
+        }
+      );
+    });
+  });
+});
+
+app.post('/api/reset-password', (req, res) => {
+  const { token, newPassword } = req.body;
+
+  if (!token || !newPassword) {
+    return res.status(400).json({ error: '缺少 token 或新密碼' });
+  }
+
+  db.get(
+    `SELECT * FROM users WHERE reset_token = ? AND reset_expires > ?`,
+    [token, Date.now()],
+    (err, user) => {
+      if (err || !user) {
+        return res.status(400).json({ error: '連結已過期或無效' });
+      }
+
+      db.run(
+        `UPDATE users SET password = ?, reset_token = NULL, reset_expires = NULL WHERE id = ?`,
+        [newPassword, user.id],
+        (err) => {
+          if (err) return res.status(500).json({ error: '更新密碼失敗' });
+
+          res.json({ message: '密碼重設成功，請重新登入' });
+        }
+      );
+    }
+  );
+});
+
+// ✅ 驗證信箱驗證碼 API
+app.post('/api/verify-code', (req, res) => {
+  const { username, code } = req.body;
+
+  if (!username || !code) {
+    return res.status(400).json({ error: '缺少帳號或驗證碼' });
+  }
+
+  db.get(
+    `SELECT * FROM users WHERE username = ? AND email_verification_code = ? AND email_code_expires > ?`,
+    [username, code, Date.now()],
+    (err, user) => {
+      if (err) {
+        console.error("❌ 驗證失敗", err);
+        return res.status(500).json({ error: '伺服器錯誤' });
+      }
+
+      if (!user) {
+        return res.status(400).json({ error: '驗證碼錯誤或已過期' });
+      }
+
+      // 驗證成功，清除驗證碼資料
+      db.run(
+        `UPDATE users SET email_verification_code = NULL, email_code_expires = NULL WHERE id = ?`,
+        [user.id],
+        (err) => {
+          if (err) {
+            return res.status(500).json({ error: '無法清除驗證碼' });
+          }
+
+          res.json({ message: '驗證成功，請繼續設定新密碼' });
+        }
+      );
+    }
+  );
 });
 
 // 啟動 Server

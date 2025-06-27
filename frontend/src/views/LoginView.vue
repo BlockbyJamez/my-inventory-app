@@ -18,7 +18,7 @@
         </el-form-item>
         <el-form-item>
           <el-checkbox v-model="form.remember">記住我</el-checkbox>
-          <a href="#" class="forgot-link">忘記密碼？</a>
+          <router-link to="/forgot-password" class="forgot-link">忘記密碼？</router-link>
         </el-form-item>
         <el-form-item style="text-align: center;">
           <router-link to="/register">沒有帳號？立即註冊</router-link>

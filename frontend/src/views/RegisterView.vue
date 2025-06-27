@@ -12,6 +12,9 @@
         <el-form-item label="確認密碼">
           <el-input v-model="form.confirmPassword" type="password" placeholder="再次輸入密碼" />
         </el-form-item>
+        <el-form-item label="信箱">
+          <el-input v-model="form.email" placeholder="請輸入 Email" />
+        </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="register" style="width: 100%;">註冊</el-button>
         </el-form-item>
@@ -33,16 +36,23 @@ const formRef = ref()
 const form = reactive({
   username: '',
   password: '',
-  confirmPassword: ''
+  confirmPassword: '',
+  email: ''
 })
 
 async function register() {
-  if (!form.username || !form.password || !form.confirmPassword) {
+  if (!form.username || !form.password || !form.confirmPassword || !form.email) {
     ElMessage.warning('請填寫所有欄位')
     return
   }
   if (form.password !== form.confirmPassword) {
     ElMessage.error('密碼與確認密碼不一致')
+    return
+  }
+  // 簡單 email 格式驗證
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(form.email)) {
+    ElMessage.error('請輸入有效的 Email 格式')
     return
   }
 
@@ -52,7 +62,8 @@ async function register() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         username: form.username,
-        password: form.password
+        password: form.password,
+        email: form.email
       })
     })
 

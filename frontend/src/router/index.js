@@ -4,6 +4,7 @@ import ProductList from '@/components/ProductList.vue'
 import ProductForm from '@/components/ProductForm.vue'
 import LoginView from '@/views/LoginView.vue'
 import RegisterView from '@/views/RegisterView.vue'
+import ForgotPassword from '@/views/ForgotPassword.vue'
 import { useAuthStore } from '@/stores/authStore'
 
 const routes = [
@@ -11,7 +12,8 @@ const routes = [
   { path: '/products', name: 'ProductList', component: ProductList, meta: { requiresAuth: true } },
   { path: '/add', name: 'ProductForm', component: ProductForm, meta: { requiresAuth: true } },
   { path: '/login', name: 'Login', component: LoginView },
-  { path: '/register', name: 'Register', component: RegisterView }
+  { path: '/register', name: 'Register', component: RegisterView },
+  { path: '/forgot-password', component: ForgotPassword },
 ]
 
 const router = createRouter({
