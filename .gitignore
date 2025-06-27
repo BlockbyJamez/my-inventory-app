@@ -1,0 +1,5 @@
+# 忽略依賴資料夾
+node_modules/
+
+# 忽略 SQLite 資料庫
+*.db
