@@ -10,7 +10,7 @@
             <el-input v-model="form.identifier" placeholder="請輸入帳號" />
           </el-form-item>
           <el-form-item>
-            <el-button type="primary" @click="sendCode" style="width: 100%;">
+            <el-button type="primary" @click="sendCode" style="width: 100%">
               寄出驗證碼
             </el-button>
           </el-form-item>
@@ -26,7 +26,7 @@
             <el-input v-model="form.code" placeholder="請輸入驗證碼" />
           </el-form-item>
           <el-form-item>
-            <el-button type="primary" @click="verifyCode" style="width: 100%;">
+            <el-button type="primary" @click="verifyCode" style="width: 100%">
               確認驗證碼
             </el-button>
           </el-form-item>
@@ -39,13 +39,25 @@
         <p class="subtitle">請輸入新的密碼</p>
         <el-form :model="form">
           <el-form-item label="新密碼">
-            <el-input v-model="form.newPassword" type="password" placeholder="請輸入新密碼" />
+            <el-input
+              v-model="form.newPassword"
+              type="password"
+              placeholder="請輸入新密碼"
+            />
           </el-form-item>
-            <el-form-item label="確認密碼">
-            <el-input v-model="form.confirmPassword" type="password" placeholder="再次輸入密碼" />
-            </el-form-item>
+          <el-form-item label="確認密碼">
+            <el-input
+              v-model="form.confirmPassword"
+              type="password"
+              placeholder="再次輸入密碼"
+            />
+          </el-form-item>
           <el-form-item>
-            <el-button type="primary" @click="resetPassword" style="width: 100%;">
+            <el-button
+              type="primary"
+              @click="resetPassword"
+              style="width: 100%"
+            >
               確認重設
             </el-button>
           </el-form-item>
@@ -56,79 +68,84 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { reactive, ref } from "vue";
+import { useRouter } from "vue-router";
+import { ElMessage } from "element-plus";
 
-const router = useRouter()
+const router = useRouter();
+const resetToken = ref("");
 
-const step = ref(1) // 1: 輸入帳號, 2: 驗證碼, 3: 新密碼
+const step = ref(1); // 1: 輸入帳號, 2: 驗證碼, 3: 新密碼
 
 const form = reactive({
-  identifier: '',
-  code: '',
-  newPassword: ''
-})
+  identifier: "",
+  code: "",
+  newPassword: "",
+  confirmPassword: "",
+});
 
 async function sendCode() {
-  if (!form.identifier) return ElMessage.warning('請輸入帳號')
+  if (!form.identifier) return ElMessage.warning("請輸入帳號");
 
-  const res = await fetch('http://localhost:3000/api/forgot-password', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ identifier: form.identifier })
-  })
+  const res = await fetch("http://localhost:3000/api/forgot-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ identifier: form.identifier }),
+  });
 
-  const result = await res.json()
+  const result = await res.json();
 
   if (res.ok) {
-    ElMessage.success('✅ 驗證碼已寄出')
-    step.value = 2
+    ElMessage.success("✅ 驗證碼已寄出");
+    step.value = 2;
   } else {
-    ElMessage.error(result.error || '寄出失敗')
+    ElMessage.error(result.error || "寄出失敗");
   }
 }
 
 async function verifyCode() {
-  if (!form.code) return ElMessage.warning('請輸入驗證碼')
+  if (!form.code) return ElMessage.warning("請輸入驗證碼");
 
-  const res = await fetch('http://localhost:3000/api/verify-code', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username: form.identifier, code: form.code })
-  })
+  const res = await fetch("http://localhost:3000/api/verify-code", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username: form.identifier, code: form.code }),
+  });
 
-  const result = await res.json()
+  const result = await res.json();
+  console.log("✅ 驗證回傳結果：", result);
+
   if (res.ok) {
-    ElMessage.success('✅ 驗證成功')
-    step.value = 3
+    ElMessage.success("✅ 驗證成功");
+    resetToken.value = result.token;
+    step.value = 3;
   } else {
-    ElMessage.error(result.error || '驗證失敗')
+    ElMessage.error(result.error || "驗證失敗");
   }
 }
 
 async function resetPassword() {
-  if (!form.newPassword) return ElMessage.warning('請輸入新密碼')
+  if (!form.newPassword) return ElMessage.warning("請輸入新密碼");
 
-    if (form.newPassword !== form.confirmPassword) {
-    return ElMessage.error('兩次密碼不一致')
-    }
+  if (form.newPassword !== form.confirmPassword) {
+    return ElMessage.error("兩次密碼不一致");
+  }
 
-  const res = await fetch('http://localhost:3000/api/reset-password', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  const res = await fetch("http://localhost:3000/api/reset-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      token: form.code,
-      newPassword: form.newPassword
-    })
-  })
+      code: resetToken.value,
+      newPassword: form.newPassword,
+    }),
+  });
 
-  const result = await res.json()
+  const result = await res.json();
   if (res.ok) {
-    ElMessage.success('✅ 密碼已重設，請重新登入')
-    router.push('/login')
+    ElMessage.success("✅ 密碼已重設，請重新登入");
+    router.push("/login");
   } else {
-    ElMessage.error(result.error || '重設失敗')
+    ElMessage.error(result.error || "重設失敗");
   }
 }
 </script>
