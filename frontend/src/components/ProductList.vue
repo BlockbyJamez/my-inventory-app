@@ -275,9 +275,13 @@ function deleteProduct(id) {
     cancelButtonText: "取消",
     type: "warning"
   })
-    .then(() => {
-      store.deleteProduct(id)
-      ElMessage.success("已刪除！")
+    .then(async () => {
+      try {
+        await store.deleteProduct(id)
+        ElMessage.success("✅ 已刪除！")
+      } catch (err) {
+        ElMessage.error("❌ 刪除失敗：" + (err.response?.data?.error || err.message))
+      }
     })
     .catch(() => {
       ElMessage.info("已取消刪除")
@@ -291,9 +295,13 @@ function openEdit(row) {
 }
 
 async function updateProduct() {
-  await store.updateProduct(editForm.value.id, { ...editForm.value });
-  ElMessage.success("✅ 已更新！");
-  editDialogVisible.value = false;
+  try {
+    await store.updateProduct(editForm.value.id, { ...editForm.value })
+    ElMessage.success("✅ 已更新！")
+    editDialogVisible.value = false
+  } catch (err) {
+    ElMessage.error("❌ 更新失敗：" + (err.response?.data?.error || err.message))
+  }
 }
 
 function handleUploadSuccess(response) {

@@ -86,7 +86,7 @@ function handleUploadSuccess(response) {
   ElMessage.success('✅ 圖片已上傳並套用！')
 }
 
-function addProduct() {
+async function addProduct() {
   if (!form.name.trim()) {
     ElMessage.warning('請輸入商品名稱')
     return
@@ -100,18 +100,22 @@ function addProduct() {
     return
   }
 
-  store.addProduct({ ...form })
-  ElMessage.success('✅ 商品已新增！')
+  try {
+    await store.addProduct({ ...form }) 
+    ElMessage.success('✅ 商品已新增！')
 
-  // 重置表單
-  form.name = ''
-  form.category = ''
-  form.price = 0
-  form.stock = 1
-  form.description = ''
-  form.image = ''
+    // 重置表單
+    form.name = ''
+    form.category = ''
+    form.price = 0
+    form.stock = 1
+    form.description = ''
+    form.image = ''
 
-  router.push('/products')
+    router.push('/products')
+  } catch (err) {
+    ElMessage.error('❌ 新增失敗：' + (err.message || '伺服器錯誤'))
+  }
 }
 
 function goBack() {
