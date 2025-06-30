@@ -82,14 +82,19 @@ async function login() {
 
     const result = await res.json()
 
-    // ✅ 記住帳號（如果有勾選）
+    // ✅ 記住帳號
     if (form.remember) {
       localStorage.setItem('savedUsername', form.username)
     } else {
       localStorage.removeItem('savedUsername')
     }
 
-    auth.login(result.username)
+    // ✅ 正確傳入 username + role
+    auth.login({
+      username: result.username,
+      role: result.role
+    })
+
     ElMessage.success('✅ 登入成功！')
     router.push('/')
   } catch (err) {

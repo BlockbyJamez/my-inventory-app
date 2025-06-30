@@ -1,5 +1,3 @@
-// backend/index.js
-
 import express from "express";
 import cors from "cors";
 import sqlite3 from "sqlite3";
@@ -34,6 +32,15 @@ app.use("/uploads", express.static(uploadDir));
 
 const db = new sqlite3.Database("MYDB.db");
 
+// ✅ 權限檢查中介函式
+function checkAdmin(req, res, next) {
+  const role = req.headers["x-role"];
+  if (role !== "admin") {
+    return res.status(403).json({ error: "只有管理員可執行此操作" });
+  }
+  next();
+}
+
 // === Product APIs ===
 
 app.get("/products", (req, res) => {
@@ -51,7 +58,7 @@ app.get("/products/:id", (req, res) => {
   });
 });
 
-app.post("/products", (req, res) => {
+app.post("/products", checkAdmin, (req, res) => {
   const { name, stock, price, category, description, image } = req.body;
   db.run(
     `INSERT INTO products (name, stock, price, category, description, image) VALUES (?, ?, ?, ?, ?, ?)`,
@@ -71,7 +78,7 @@ app.post("/products", (req, res) => {
   );
 });
 
-app.put("/products/:id", (req, res) => {
+app.put("/products/:id", checkAdmin, (req, res) => {
   const { name, stock, price, category, description, image } = req.body;
   db.run(
     `UPDATE products SET name = ?, stock = ?, price = ?, category = ?, description = ?, image = ? WHERE id = ?`,
@@ -93,7 +100,7 @@ app.put("/products/:id", (req, res) => {
   );
 });
 
-app.delete("/products/:id", (req, res) => {
+app.delete("/products/:id", checkAdmin, (req, res) => {
   db.run(`DELETE FROM products WHERE id = ?`, [req.params.id], function (err) {
     if (err) return res.status(500).json({ error: err.message });
     if (this.changes === 0)
@@ -121,7 +128,12 @@ app.post("/api/login", (req, res) => {
     [username, password],
     (err, row) => {
       if (err) return res.status(500).json({ error: "伺服器錯誤" });
-      if (row) res.json({ success: true, username: row.username });
+      if (row)
+        res.json({
+          success: true,
+          username: row.username,
+          role: row.role, // ✅ 回傳角色
+        });
       else res.status(401).json({ error: "帳號或密碼錯誤" });
     }
   );
@@ -194,8 +206,6 @@ app.post("/api/verify-code", (req, res) => {
     (err, user) => {
       if (err || !user)
         return res.status(400).json({ error: "驗證碼錯誤或已過期" });
-
-      // ✅ 成功回傳 token（即驗證碼）給前端
       res.json({ message: "驗證成功，請繼續設定新密碼", token: code });
     }
   );
@@ -203,7 +213,6 @@ app.post("/api/verify-code", (req, res) => {
 
 app.post("/api/reset-password", (req, res) => {
   const { code, newPassword } = req.body;
-
   if (!code || !newPassword)
     return res.status(400).json({ error: "缺少驗證碼或新密碼" });
 
@@ -219,7 +228,6 @@ app.post("/api/reset-password", (req, res) => {
         [newPassword, user.id],
         (err) => {
           if (err) return res.status(500).json({ error: "更新密碼失敗" });
-
           res.json({ message: "密碼重設成功，請重新登入" });
         }
       );
@@ -228,7 +236,5 @@ app.post("/api/reset-password", (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(
-    `✅ Backend running with SQLite + file upload on http://localhost:${port}`
-  );
+  console.log(`✅ Backend running on http://localhost:${port}`);
 });

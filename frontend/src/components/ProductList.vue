@@ -59,7 +59,7 @@
           :value="category"
         />
       </el-select>
-      <el-button type="primary" @click="goToAdd">
+      <el-button v-if="isAdmin" type="primary" @click="goToAdd">
         ➕ 新增商品
       </el-button>
     </div>
@@ -85,7 +85,7 @@
       <el-table-column prop="category" label="分類" sortable />
       <el-table-column prop="price" label="價格" sortable />
       <el-table-column prop="stock" label="庫存數量" sortable />
-      <el-table-column label="操作" width="200">
+      <el-table-column label="操作" width="200" v-if="isAdmin">
         <template #default="scope">
           <el-button size="small" @click="openEdit(scope.row)">編輯</el-button>
           <el-button
@@ -160,7 +160,10 @@ import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useProductStore } from "@/stores/productStore";
 import { ElMessageBox, ElMessage } from "element-plus";
+import { useAuthStore } from '@/stores/authStore'
 
+const auth = useAuthStore()
+const isAdmin = computed(() => auth.user?.role === 'admin')
 const router = useRouter();
 const store = useProductStore();
 const products = computed(() => store.products);
@@ -266,23 +269,25 @@ function goToAdd() {
 }
 
 function deleteProduct(id) {
+  if (!isAdmin.value) return
   ElMessageBox.confirm("確定要刪除這個商品嗎？", "提示", {
     confirmButtonText: "確定",
     cancelButtonText: "取消",
     type: "warning"
   })
     .then(() => {
-      store.deleteProduct(id);
-      ElMessage.success("已刪除！");
+      store.deleteProduct(id)
+      ElMessage.success("已刪除！")
     })
     .catch(() => {
-      ElMessage.info("已取消刪除");
-    });
+      ElMessage.info("已取消刪除")
+    })
 }
 
 function openEdit(row) {
-  editForm.value = { ...row };
-  editDialogVisible.value = true;
+  if (!isAdmin.value) return
+  editForm.value = { ...row }
+  editDialogVisible.value = true
 }
 
 async function updateProduct() {
