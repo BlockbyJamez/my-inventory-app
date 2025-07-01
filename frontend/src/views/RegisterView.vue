@@ -1,28 +1,35 @@
 <template>
-  <div class="register-page">
-    <div class="register-card">
+  <div class="register-container">
+    <el-card class="register-card" shadow="always">
       <h2>📝 建立新帳號</h2>
-      <el-form :model="form" ref="formRef" class="register-form">
+      <p class="subtitle">請填寫下列欄位以註冊帳號</p>
+
+      <el-form :model="form" ref="formRef" label-position="top" class="register-form">
         <el-form-item label="帳號">
           <el-input v-model="form.username" placeholder="請輸入帳號" />
         </el-form-item>
+
         <el-form-item label="密碼">
           <el-input v-model="form.password" type="password" placeholder="請輸入密碼" />
         </el-form-item>
+
         <el-form-item label="確認密碼">
           <el-input v-model="form.confirmPassword" type="password" placeholder="再次輸入密碼" />
         </el-form-item>
-        <el-form-item label="信箱">
+
+        <el-form-item label="電子信箱">
           <el-input v-model="form.email" placeholder="請輸入 Email" />
         </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="register" style="width: 100%;">註冊</el-button>
-        </el-form-item>
-        <el-form-item style="text-align: center;">
-          <router-link to="/login">已有帳號？前往登入</router-link>
-        </el-form-item>
+
+        <el-button type="primary" @click="register" class="register-btn" size="large">
+          註冊
+        </el-button>
+
+        <div class="login-link">
+          <router-link to="/login">已有帳號？點此登入</router-link>
+        </div>
       </el-form>
-    </div>
+    </el-card>
   </div>
 </template>
 
@@ -49,7 +56,6 @@ async function register() {
     ElMessage.error('密碼與確認密碼不一致')
     return
   }
-  // 簡單 email 格式驗證
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   if (!emailRegex.test(form.email)) {
     ElMessage.error('請輸入有效的 Email 格式')
@@ -81,20 +87,48 @@ async function register() {
 </script>
 
 <style scoped>
-.register-page {
+.register-container {
   display: flex;
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: linear-gradient(to right, #fceabb, #f8b500);
+  background: linear-gradient(to right, #fefcea, #f1da36);
+  padding: 20px;
 }
 
 .register-card {
-  background: white;
-  padding: 2rem;
-  border-radius: 1rem;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-  width: min(90vw, 400px);
+  width: 100%;
+  max-width: 450px;
+  padding: 40px 30px;
+  border-radius: 12px;
   text-align: center;
+}
+
+h2 {
+  margin-bottom: 10px;
+  font-size: 1.6rem;
+  color: #303133;
+}
+
+.subtitle {
+  font-size: 0.9rem;
+  color: #888;
+  margin-bottom: 24px;
+}
+
+.register-form {
+  text-align: left;
+}
+
+.register-btn {
+  width: 100%;
+  margin-top: 10px;
+  margin-bottom: 16px;
+}
+
+.login-link {
+  text-align: center;
+  font-size: 0.85rem;
+  color: #606266;
 }
 </style>

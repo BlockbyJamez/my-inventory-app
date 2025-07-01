@@ -62,6 +62,53 @@ db.serialize(() => {
     );
   });
 
+  // 出入庫紀錄表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS transactions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      product_id INTEGER NOT NULL,
+      type TEXT CHECK(type IN ('in', 'out')) NOT NULL,
+      quantity INTEGER NOT NULL,
+      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+      note TEXT,
+      operator TEXT,
+      FOREIGN KEY (product_id) REFERENCES products(id)
+    )
+  `, (err) => {
+    if (err) {
+      console.error("❌ 建立 transactions 表失敗", err);
+    } else {
+      console.log("✅ 出入庫紀錄表 transactions 建立完成");
+    }
+  });
+
+  // ✅ 檢查 transactions 是否已有 operator 欄位，若無則補上
+  db.get(`SELECT COUNT(*) as count FROM pragma_table_info('transactions') WHERE name = 'operator'`, (err, row) => {
+    if (!err && row.count === 0) {
+      db.run(`ALTER TABLE transactions ADD COLUMN operator TEXT`, (err) => {
+        if (err) console.error("❌ 新增 operator 欄位失敗", err);
+        else console.log("✅ 已新增欄位：operator");
+      });
+    }
+  });
+
+    // 操作記錄表（logs）
+  db.run(`
+    CREATE TABLE IF NOT EXISTS logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT NOT NULL,
+      action TEXT NOT NULL,
+      details TEXT,
+      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `, (err) => {
+    if (err) {
+      console.error("❌ 建立 logs 表失敗", err);
+    } else {
+      console.log("✅ 操作記錄表 logs 建立完成");
+    }
+  });
+
   // ✅ 若產品為空，就插入預設資料
   db.get("SELECT COUNT(*) AS count FROM products", (err, row) => {
     if (err) {

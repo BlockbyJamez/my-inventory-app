@@ -17,7 +17,7 @@ body,
   margin: 0;
   padding: 0;
   min-height: 100vh;
-  background: #eef2f6; /* 一律一致，避免背景色差 */
+  background: #eef2f6;
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;

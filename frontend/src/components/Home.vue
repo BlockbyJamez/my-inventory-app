@@ -1,18 +1,47 @@
-<!-- src/components/Home.vue -->
 <template>
-  <div class="container home-page">
-    <h1>📦 我的庫存系統</h1>
-    <p>請選擇要進行的功能：</p>
-    <div class="button-group">
-      <button class="custom-btn primary" @click="$router.push('/products')">
-        商品庫存管理
-      </button>
-      <button class="custom-btn success" @click="$router.push('/add')">
-        新增商品
-      </button>
-      <button class="custom-btn danger" @click="handleLogout">
-        登出
-      </button>
+  <div class="home-container">
+    <div class="header">
+      <h2>歡迎，{{ authStore.user?.username }}</h2>
+      <el-tag type="info" effect="dark">角色：{{ authStore.user?.role }}</el-tag>
+    </div>
+
+    <h1 class="title">📦 庫存管理系統首頁</h1>
+
+    <div class="grid-menu">
+      <el-card class="menu-card" shadow="hover" @click="$router.push('/products')">
+        <div class="card-icon">📋</div>
+        <div class="card-text">商品庫存管理</div>
+      </el-card>
+
+      <el-card class="menu-card" shadow="hover" @click="$router.push('/transactions')">
+        <div class="card-icon">🔄</div>
+        <div class="card-text">出入庫管理</div>
+      </el-card>
+
+      <el-card
+        v-if="authStore.user?.role === 'admin'"
+        class="menu-card"
+        shadow="hover"
+        @click="$router.push('/logs')"
+      >
+        <div class="card-icon">📝</div>
+        <div class="card-text">操作紀錄</div>
+      </el-card>
+
+      <el-card
+        v-if="authStore.user?.role === 'admin'"
+        class="menu-card"
+        shadow="hover"
+        @click="$router.push('/permissions')"
+      >
+        <div class="card-icon">🔐</div>
+        <div class="card-text">權限管理</div>
+      </el-card>
+
+      <el-card class="menu-card logout" shadow="hover" @click="handleLogout">
+        <div class="card-icon">🚪</div>
+        <div class="card-text">登出</div>
+      </el-card>
     </div>
   </div>
 </template>
@@ -31,42 +60,56 @@ function handleLogout() {
 </script>
 
 <style scoped>
-.home-page {
-  text-align: center;
+.home-container {
+  max-width: 1000px;
+  margin: 40px auto;
+  padding: 0 20px;
 }
 
-.button-group {
+.header {
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.title {
+  text-align: center;
+  margin-bottom: 30px;
+  font-size: 2rem;
+  color: #303133;
+}
+
+.grid-menu {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 20px;
-  margin-top: 40px;
 }
 
-.custom-btn {
-  width: 100%;
-  padding: 14px 0;
-  font-size: 1.1rem;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
+.menu-card {
+  text-align: center;
   cursor: pointer;
-  transition: transform 0.1s ease, filter 0.1s ease;
+  padding: 30px 10px;
+  transition: transform 0.15s ease;
 }
 
-.custom-btn.primary {
-  background-color: #409eff;
+.menu-card:hover {
+  transform: scale(1.04);
 }
 
-.custom-btn.success {
-  background-color: #67c23a;
+.card-icon {
+  font-size: 2.4rem;
+  margin-bottom: 12px;
 }
 
-.custom-btn.danger {
-  background-color: #f56c6c;
+.card-text {
+  font-size: 1.1rem;
+  font-weight: 500;
 }
 
-.custom-btn:hover {
-  transform: scale(1.02);
-  filter: brightness(1.05);
+.logout {
+  background-color: #fde2e2;
+  color: #f56c6c;
+  border: 1px solid #f56c6c;
 }
 </style>

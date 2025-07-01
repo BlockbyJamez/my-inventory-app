@@ -1,0 +1,151 @@
+<template>
+  <div class="log-page">
+    <el-card>
+      <div class="header">
+        <el-page-header content="📝 操作紀錄" @back="goBack" />
+        <el-select
+          v-model="selectedAction"
+          placeholder="篩選操作類型"
+          clearable
+          class="action-filter"
+        >
+          <el-option label="全部" :value="''" />
+          <el-option label="新增商品" value="add_product" />
+          <el-option label="更新商品" value="update_product" />
+          <el-option label="刪除商品" value="delete_product" />
+          <el-option label="出入庫" value="add_transaction" />
+          <el-option label="權限變更" value="update_permissions" />
+          <el-option label="登入成功" value="login_success" />
+          <el-option label="註冊帳號" value="register_user" />
+        </el-select>
+      </div>
+
+      <h2 class="title">📋 操作紀錄一覽</h2>
+
+      <el-table :data="filteredLogs" style="width: 100%" border stripe>
+        <el-table-column prop="timestamp" label="時間" width="180" />
+        <el-table-column prop="username" label="操作人" width="120" />
+        <el-table-column prop="action" label="操作行為" width="150" />
+        <el-table-column label="細節">
+          <template #default="{ row }">
+            <div>{{ summarize(row) }}</div>
+            <el-popover trigger="click" placement="bottom">
+              <template #reference>
+                <el-button size="small" text type="primary">查看原始 JSON</el-button>
+              </template>
+              <pre class="json-view">
+                {{ formatDetails(row.details) }}
+              </pre>
+            </el-popover>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+  </div>
+</template>
+
+<script setup>
+import { onMounted, ref, computed } from 'vue'
+import { useAuthStore } from '@/stores/authStore'
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+
+const logs = ref([])
+const selectedAction = ref('')
+const auth = useAuthStore()
+const router = useRouter()
+
+function goBack() {
+  router.push('/')
+}
+
+function formatDetails(details) {
+  if (!details) return '-'
+  try {
+    return JSON.stringify(JSON.parse(details), null, 2)
+  } catch (e) {
+    return details
+  }
+}
+
+function summarize(row) {
+  try {
+    const d = JSON.parse(row.details || '{}')
+    switch (row.action) {
+      case 'update_product':
+        return `✏️ 更新商品「${d.name}」，庫存改為 ${d.stock}`
+      case 'add_product':
+        return `➕ 新增商品「${d.name}」`
+      case 'delete_product':
+        return `🗑️ 刪除商品 ID ${d.id}`
+      case 'add_transaction':
+        return `📦 商品「${d.productName}」${d.type === 'in' ? '入庫' : '出庫'} ${d.quantity}`
+      case 'update_permissions':
+        return `🛂 修改使用者「${d.username}」權限為 ${d.newRole}`
+      case 'login_success':
+        return `🔑 使用者「${d.username}」登入成功`
+      case 'register_user':
+        return `🆕 註冊新使用者「${d.username}」`
+      default:
+        return '—'
+    }
+  } catch {
+    return '—'
+  }
+}
+
+const filteredLogs = computed(() => {
+  if (!selectedAction.value) return logs.value
+  return logs.value.filter(log => log.action === selectedAction.value)
+})
+
+async function fetchLogs() {
+  const res = await fetch('http://localhost:3000/logs', {
+    headers: {
+      'x-role': auth.user?.role || '',
+      'x-username': auth.user?.username || 'unknown'
+    }
+  })
+  const data = await res.json()
+  if (res.ok) {
+    logs.value = data
+  } else {
+    ElMessage.error(data.error || '讀取失敗')
+  }
+}
+
+onMounted(fetchLogs)
+</script>
+
+<style scoped>
+.log-page {
+  max-width: 1000px;
+  margin: 40px auto;
+  padding: 0 20px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.action-filter {
+  width: 250px;
+}
+
+.title {
+  text-align: center;
+  margin-bottom: 30px;
+  font-size: 2rem;
+  color: #303133;
+}
+
+.json-view {
+  white-space: pre-wrap;
+  max-width: 600px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+</style>

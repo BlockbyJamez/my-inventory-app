@@ -19,7 +19,8 @@ export const useProductStore = defineStore('product', {
       const auth = useAuthStore()
       await axios.post('http://localhost:3000/products', product, {
         headers: {
-          'x-role': auth.user?.role
+          'x-role': auth.user?.role,
+          'x-username': auth.user?.username || 'unknown'
         }
       })
       this.fetchProducts()
@@ -30,7 +31,8 @@ export const useProductStore = defineStore('product', {
       const auth = useAuthStore()
       await axios.delete(`http://localhost:3000/products/${id}`, {
         headers: {
-          'x-role': auth.user?.role
+          'x-role': auth.user?.role,
+          'x-username': auth.user?.username || 'unknown'
         }
       })
       this.fetchProducts()
@@ -41,7 +43,8 @@ export const useProductStore = defineStore('product', {
       const auth = useAuthStore()
       await axios.put(`http://localhost:3000/products/${id}`, updatedData, {
         headers: {
-          'x-role': auth.user?.role
+          'x-role': auth.user?.role,
+          'x-username': auth.user?.username || 'unknown'
         }
       })
       this.fetchProducts()
