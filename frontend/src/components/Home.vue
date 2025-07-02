@@ -1,19 +1,29 @@
 <template>
   <div class="home-container">
     <div class="header">
-      <h2>歡迎，{{ authStore.user?.username }}</h2>
-      <el-tag type="info" effect="dark">角色：{{ authStore.user?.role }}</el-tag>
+      <h2>👋 歡迎，{{ authStore.user?.username }}</h2>
+      <el-tag type="info" effect="dark">
+        角色：{{ authStore.user?.role }}
+      </el-tag>
     </div>
 
     <h1 class="title">📦 庫存管理系統首頁</h1>
 
     <div class="grid-menu">
-      <el-card class="menu-card" shadow="hover" @click="$router.push('/products')">
+      <el-card
+        class="menu-card"
+        shadow="hover"
+        @click="$router.push('/products')"
+      >
         <div class="card-icon">📋</div>
         <div class="card-text">商品庫存管理</div>
       </el-card>
 
-      <el-card class="menu-card" shadow="hover" @click="$router.push('/transactions')">
+      <el-card
+        class="menu-card"
+        shadow="hover"
+        @click="$router.push('/transactions')"
+      >
         <div class="card-icon">🔄</div>
         <div class="card-text">出入庫管理</div>
       </el-card>
@@ -47,15 +57,15 @@
 </template>
 
 <script setup>
-import { useAuthStore } from '@/stores/authStore'
-import { useRouter } from 'vue-router'
+import { useAuthStore } from "@/stores/authStore";
+import { useRouter } from "vue-router";
 
-const authStore = useAuthStore()
-const router = useRouter()
+const authStore = useAuthStore();
+const router = useRouter();
 
 function handleLogout() {
-  authStore.logout()
-  router.push('/login')
+  authStore.logout();
+  router.push("/login");
 }
 </script>
 
@@ -63,19 +73,22 @@ function handleLogout() {
 .home-container {
   max-width: 1000px;
   margin: 40px auto;
-  padding: 0 20px;
+  padding: 2rem 1.5rem;
+  background: linear-gradient(135deg, #f5f7fa, #e4edf4);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
 }
 
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .title {
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 40px;
   font-size: 2rem;
   color: #303133;
 }
@@ -90,26 +103,30 @@ function handleLogout() {
   text-align: center;
   cursor: pointer;
   padding: 30px 10px;
-  transition: transform 0.15s ease;
+  border-radius: 12px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .menu-card:hover {
-  transform: scale(1.04);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
 }
 
 .card-icon {
-  font-size: 2.4rem;
+  font-size: 2.6rem;
   margin-bottom: 12px;
 }
 
 .card-text {
   font-size: 1.1rem;
   font-weight: 500;
+  color: #303133;
 }
 
 .logout {
-  background-color: #fde2e2;
-  color: #f56c6c;
+  background-color: #fff5f5;
   border: 1px solid #f56c6c;
+  color: #f56c6c;
 }
 </style>

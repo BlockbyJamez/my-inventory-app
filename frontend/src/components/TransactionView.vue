@@ -8,8 +8,17 @@
       <h2 class="title">📝 新增出入庫紀錄</h2>
       <el-form :model="form" label-width="80px" @submit.prevent>
         <el-form-item label="商品">
-          <el-select v-model="form.product_id" placeholder="請選擇商品" style="width: 100%">
-            <el-option v-for="p in products" :key="p.id" :label="p.name" :value="p.id" />
+          <el-select
+            v-model="form.product_id"
+            placeholder="請選擇商品"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="p in products"
+              :key="p.id"
+              :label="p.name"
+              :value="p.id"
+            />
           </el-select>
         </el-form-item>
 
@@ -29,22 +38,48 @@
         </el-form-item>
 
         <el-form-item>
-          <el-button type="primary" @click="handleSubmit" style="width: 100%">送出</el-button>
+          <el-button
+            type="primary"
+            @click="handleSubmit"
+            size="large"
+            round
+            class="full-width"
+          >
+            送出
+          </el-button>
         </el-form-item>
       </el-form>
     </el-card>
 
     <el-card>
       <h2 class="title">🔍 篩選條件</h2>
-      <el-form :inline="true" :model="filter" class="filter-form" label-width="60px">
+      <el-form
+        :inline="true"
+        :model="filter"
+        class="filter-form"
+        label-width="60px"
+      >
         <el-form-item label="商品">
-          <el-select v-model="filter.product_id" placeholder="全部商品" style="width: 180px">
+          <el-select
+            v-model="filter.product_id"
+            placeholder="全部商品"
+            style="width: 180px"
+          >
             <el-option label="全部商品" :value="''" />
-            <el-option v-for="p in products" :key="p.id" :label="p.name" :value="p.id" />
+            <el-option
+              v-for="p in products"
+              :key="p.id"
+              :label="p.name"
+              :value="p.id"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="類型">
-          <el-select v-model="filter.type" placeholder="全部" style="width: 120px">
+          <el-select
+            v-model="filter.type"
+            placeholder="全部"
+            style="width: 120px"
+          >
             <el-option label="全部" value="" />
             <el-option label="入庫" value="in" />
             <el-option label="出庫" value="out" />
@@ -64,7 +99,7 @@
         <el-table-column prop="type" label="類型" width="80">
           <template #default="{ row }">
             <el-tag :type="row.type === 'in' ? 'success' : 'danger'">
-              {{ row.type === 'in' ? '入庫' : '出庫' }}
+              {{ row.type === "in" ? "入庫" : "出庫" }}
             </el-tag>
           </template>
         </el-table-column>
@@ -77,84 +112,86 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { useAuthStore } from '@/stores/authStore'
+import { ref, onMounted, computed } from "vue";
+import { useRouter } from "vue-router";
+import { ElMessage } from "element-plus";
+import { useAuthStore } from "@/stores/authStore";
 
-const router = useRouter()
-const products = ref([])
-const transactions = ref([])
+const router = useRouter();
+const products = ref([]);
+const transactions = ref([]);
 const form = ref({
   product_id: null,
-  type: 'in',
+  type: "in",
   quantity: 1,
-  note: ''
-})
+  note: "",
+});
 
 const filter = ref({
-  product_id: '',
-  type: ''
-})
+  product_id: "",
+  type: "",
+});
 
 const filteredTransactions = computed(() => {
-  return transactions.value.filter(t => {
-    return (!filter.value.type || t.type === filter.value.type) &&
-           (!filter.value.product_id || t.product_id === filter.value.product_id)
-  })
-})
+  return transactions.value.filter((t) => {
+    return (
+      (!filter.value.type || t.type === filter.value.type) &&
+      (!filter.value.product_id || t.product_id === filter.value.product_id)
+    );
+  });
+});
 
 function resetFilter() {
-  filter.value.product_id = ''
-  filter.value.type = ''
+  filter.value.product_id = "";
+  filter.value.type = "";
 }
 
 async function fetchProducts() {
-  const res = await fetch('http://localhost:3000/products')
-  products.value = await res.json()
-  if (products.value.length) form.value.product_id = products.value[0].id
+  const res = await fetch("http://localhost:3000/products");
+  products.value = await res.json();
+  if (products.value.length) form.value.product_id = products.value[0].id;
 }
 
 async function fetchTransactions() {
-  const res = await fetch('http://localhost:3000/transactions')
-  transactions.value = await res.json()
+  const res = await fetch("http://localhost:3000/transactions");
+  transactions.value = await res.json();
 }
 
 async function handleSubmit() {
-  const auth = useAuthStore()
-  const role = auth.user?.role || 'viewer'
-  const username = auth.user?.username || 'unknown'
-  const res = await fetch('http://localhost:3000/transactions', {
-    method: 'POST',
+  const auth = useAuthStore();
+  const role = auth.user?.role || "viewer";
+  const username = auth.user?.username || "unknown";
+  const res = await fetch("http://localhost:3000/transactions", {
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
-      'x-role': role,
-      'x-username': username
+      "Content-Type": "application/json",
+      "x-role": role,
+      "x-username": username,
     },
-    body: JSON.stringify(form.value)
-  })
+    body: JSON.stringify(form.value),
+  });
 
-  const result = await res.json()
+  const result = await res.json();
   if (res.ok) {
-    ElMessage.success('✅ 出入庫成功')
-    form.value.quantity = 1
-    form.value.note = ''
-    fetchTransactions()
+    ElMessage.success("✅ 出入庫成功");
+    form.value.quantity = 1;
+    form.value.note = "";
+    fetchTransactions();
   } else {
-    ElMessage.error('❌ ' + result.error)
+    ElMessage.error("❌ " + result.error);
   }
 }
 
 onMounted(() => {
-  fetchProducts()
-  fetchTransactions()
-})
+  fetchProducts();
+  fetchTransactions();
+});
 
 function goBack() {
   if (window.history.length > 1) {
-    router.back()
+    router.back();
   } else {
-    router.push('/')
+    router.push("/");
   }
 }
 </script>
@@ -163,7 +200,10 @@ function goBack() {
 .transaction-page {
   max-width: 1000px;
   margin: 40px auto;
-  padding: 0 20px;
+  padding: 2rem 1.5rem;
+  background: linear-gradient(135deg, #f5f7fa, #e4edf4);
+  border-radius: 16px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
   display: flex;
   flex-direction: column;
   gap: 30px;
@@ -173,14 +213,52 @@ function goBack() {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 
 .title {
-  font-size: 2rem;
+  font-size: 1.8rem;
   font-weight: 600;
-  text-align: center;
-  margin: 20px 0;
   color: #303133;
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.el-card {
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.filter-form {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.el-form-item {
+  margin-bottom: 16px;
+}
+
+.el-button {
+  font-weight: 500;
+}
+
+.el-table {
+  margin-top: 1rem;
+  border-radius: 8px;
+}
+
+.el-table th {
+  text-align: center;
+}
+
+.el-table td {
+  text-align: center;
 }
 </style>
