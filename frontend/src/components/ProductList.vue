@@ -1,6 +1,6 @@
 <template>
   <div class="product-list-page">
-    <el-card>
+    <el-card class="main-card" shadow="always">
       <!-- ✅ Header + Title -->
       <div class="header">
         <el-page-header content="📊 商品庫存管理" @back="goBack" />
@@ -55,36 +55,55 @@
         </el-button>
       </div>
 
-      <!-- ✅ 表格 -->
-      <el-table
-        :data="paginatedData"
-        class="product-table"
-        :default-sort="{ prop: defaultSort.prop, order: defaultSort.order }"
-        @sort-change="handleSortChange"
-      >
-        <el-table-column prop="id" label="ID" width="80" sortable />
-        <el-table-column label="圖片" width="120" align="center" header-align="center">
-          <template #default="scope">
-            <img
-              :src="scope.row.image || 'https://via.placeholder.com/100'"
-              alt="無圖"
-              class="thumbnail"
-            />
-          </template>
-        </el-table-column>
-        <el-table-column prop="name" label="商品名稱" sortable />
-        <el-table-column prop="category" label="分類" sortable />
-        <el-table-column prop="price" label="價格" sortable />
-        <el-table-column prop="stock" label="庫存數量" sortable />
-        <el-table-column label="操作" width="200" v-if="isAdmin">
-          <template #default="scope">
-            <el-button size="small" @click="openEdit(scope.row)">編輯</el-button>
-            <el-button size="small" type="danger" @click="deleteProduct(scope.row.id)">
-              刪除
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+      <!-- ✅ 桌面版表格 / 手機版卡片切換 -->
+      <div v-if="!isMobile">
+        <el-table
+          :data="paginatedData"
+          class="product-table"
+          :default-sort="{ prop: defaultSort.prop, order: defaultSort.order }"
+          @sort-change="handleSortChange"
+        >
+          <el-table-column prop="id" label="ID" width="80" sortable />
+          <el-table-column label="圖片" width="120" align="center" header-align="center">
+            <template #default="scope">
+              <img
+                :src="scope.row.image || 'https://via.placeholder.com/100'"
+                alt="無圖"
+                class="thumbnail"
+              />
+            </template>
+          </el-table-column>
+          <el-table-column prop="name" label="商品名稱" sortable />
+          <el-table-column prop="category" label="分類" sortable />
+          <el-table-column prop="price" label="價格" sortable />
+          <el-table-column prop="stock" label="庫存數量" sortable />
+          <el-table-column label="操作" width="200" v-if="isAdmin">
+            <template #default="scope">
+              <el-button size="small" @click="openEdit(scope.row)">編輯</el-button>
+              <el-button size="small" type="danger" @click="deleteProduct(scope.row.id)">
+                刪除
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+
+      <!-- ✅ 手機版卡片 -->
+      <div v-else class="product-card-list">
+        <div v-for="item in paginatedData" :key="item.id" class="product-card">
+          <img :src="item.image || 'https://via.placeholder.com/100'" alt="商品圖" />
+          <div class="product-info">
+            <p><strong>商品名稱：</strong>{{ item.name }}</p>
+            <p><strong>分類：</strong>{{ item.category }}</p>
+            <p><strong>價格：</strong>{{ item.price }}</p>
+            <p><strong>庫存：</strong>{{ item.stock }}</p>
+          </div>
+          <div v-if="isAdmin" class="card-actions">
+            <el-button size="small" @click="openEdit(item)">編輯</el-button>
+            <el-button size="small" type="danger" @click="deleteProduct(item.id)">刪除</el-button>
+          </div>
+        </div>
+      </div>
 
       <!-- ✅ 分頁器 -->
       <el-pagination
@@ -135,15 +154,17 @@
       </el-form>
 
       <template #footer>
-        <el-button @click="editDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="updateProduct">儲存</el-button>
+      <div class="dialog-footer-buttons">
+        <el-button size="small" @click="editDialogVisible = false">取消</el-button>
+        <el-button size="small" type="primary" @click="updateProduct">儲存</el-button>
+      </div>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue"
+import { ref, computed, onMounted, onUnmounted } from "vue"
 import { useRouter } from "vue-router"
 import { useProductStore } from "@/stores/productStore"
 import { ElMessageBox, ElMessage } from "element-plus"
@@ -163,29 +184,31 @@ const pageSize = ref(5)
 const defaultSort = ref({ prop: "id", order: "ascending" })
 const currentSort = ref({ ...defaultSort.value })
 
-// ✅ 分類選項
+const isMobile = ref(window.innerWidth <= 768)
+function handleResize() {
+  isMobile.value = window.innerWidth <= 768
+}
+window.addEventListener("resize", handleResize)
+onUnmounted(() => window.removeEventListener("resize", handleResize))
+
 const categoryOptions = computed(() => {
   const categories = new Set(products.value.map((p) => p.category));
   return Array.from(categories);
 });
 
-// ✅ 篩選 + 排序
 const sortedAndFiltered = computed(() => {
   let list = [...products.value];
 
-  // 🔍 名稱過濾
   if (searchText.value) {
     list = list.filter((p) =>
       p.name.toLowerCase().includes(searchText.value.toLowerCase())
     );
   }
 
-  // 📂 分類過濾
   if (selectedCategory.value) {
     list = list.filter((p) => p.category === selectedCategory.value);
   }
 
-  // ⬆⬇ 排序
   if (currentSort.value.prop && currentSort.value.order !== null) {
     const prop = currentSort.value.prop;
     const order = currentSort.value.order === "ascending" ? 1 : -1;
@@ -323,7 +346,15 @@ function handleUploadSuccess(response) {
   padding: 0 20px;
 }
 
-/* 統一 header 排版（與 /logs 相同） */
+.main-card {
+  border-radius: 16px;
+  overflow: hidden;
+  padding: 24px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.06);
+  background-color: #fff;
+  border: 1px solid #ebeef5;
+}
+
 .header {
   display: flex;
   justify-content: space-between;
@@ -331,7 +362,6 @@ function handleUploadSuccess(response) {
   margin-bottom: 10px;
 }
 
-/* 統一主標題樣式 */
 .title {
   font-size: 2rem;
   font-weight: 600;
@@ -340,7 +370,6 @@ function handleUploadSuccess(response) {
   color: #303133;
 }
 
-/* 統計卡片排版 */
 .stat-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -369,7 +398,6 @@ function handleUploadSuccess(response) {
   color: #303133;
 }
 
-/* 搜尋列區塊 */
 .action-bar {
   display: flex;
   justify-content: space-between;
@@ -389,13 +417,15 @@ function handleUploadSuccess(response) {
   max-width: 220px;
 }
 
-/* 表格區塊 */
 .product-table {
   width: 100%;
   margin-bottom: 30px;
 }
 
-/* 分類明細 */
+.product-card-list {
+  display: none;
+}
+
 .category-summary {
   margin-bottom: 30px;
   font-size: 1rem;
@@ -429,7 +459,6 @@ function handleUploadSuccess(response) {
   font-weight: 500;
 }
 
-/* 商品圖片 */
 .thumbnail {
   width: 80px;
   height: 80px;
@@ -441,8 +470,142 @@ function handleUploadSuccess(response) {
   margin: 0 auto;
 }
 
-/* 分頁器置中 */
 .pagination {
   text-align: center;
+}
+
+@media (max-width: 768px) {
+  .stat-cards {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .stat-card {
+    padding: 12px;
+  }
+
+  .stat-title {
+    font-size: 0.9rem;
+  }
+
+  .stat-value {
+    font-size: 1.2rem;
+  }
+
+  .category-list {
+    padding-left: 0;
+    justify-content: flex-start;
+    font-size: 14px;
+  }
+
+  .category-chip {
+    padding: 4px 10px;
+    font-size: 13px;
+  }
+
+  .action-bar {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px !important;
+    margin-bottom: 10px !important;
+  }
+
+  .search-input,
+  .category-select,
+  .el-button {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .search-input .el-input__wrapper,
+  .category-select .el-input__wrapper {
+    min-height: 36px !important;
+    padding: 4px 10px !important;
+    font-size: 14px;
+    box-sizing: border-box;
+  }
+
+  .search-input .el-input,
+  .category-select .el-input {
+    line-height: 1.2 !important;
+  }
+
+  .el-input__inner {
+    font-size: 14px;
+  }
+
+  .el-button {
+    height: 36px;
+    font-size: 14px;
+    margin-top: 0 !important;
+  }
+
+  .el-form-item {
+    margin-bottom: 10px !important;
+  }
+
+  .product-card-list {
+    display: flex !important;
+    flex-direction: column;
+    gap: 20px;
+    margin-bottom: 30px;
+  }
+
+  .product-card {
+    background: #fff;
+    border: 1px solid #ebeef5;
+    border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    padding: 16px;
+    text-align: left;
+  }
+
+  .product-card img {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    margin: 0 auto 12px;
+    border-radius: 12px;
+    background-color: #f9f9f9;
+    object-fit: contain;
+  }
+
+  .product-info {
+    font-size: 14px;
+    color: #333;
+  }
+
+  .product-info p {
+    margin: 4px 0;
+  }
+
+  .card-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .card-actions .el-button {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .pagination {
+    text-align: center;
+    margin-top: 20px;
+  }
+
+  .dialog-footer-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .dialog-footer-buttons .el-button {
+    flex: 1 1 40%;
+    min-width: 100px;
+    white-space: nowrap;
+  }
 }
 </style>

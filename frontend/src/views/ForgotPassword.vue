@@ -177,6 +177,10 @@ async function resetPassword() {
     return ElMessage.warning("請輸入新密碼");
   }
 
+  if (form.newPassword.length < 4) {
+    return ElMessage.warning("密碼長度不得小於 4 碼");
+  }
+
   if (form.newPassword !== form.confirmPassword) {
     return ElMessage.error("兩次密碼不一致");
   }

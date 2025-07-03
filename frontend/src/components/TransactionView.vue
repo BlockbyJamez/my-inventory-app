@@ -1,17 +1,18 @@
 <template>
   <div class="transaction-page">
-    <el-card>
+    <!-- 新增出入庫 -->
+    <el-card class="main-card" shadow="always">
       <div class="header">
         <el-page-header content="📦 出入庫管理" @back="goBack" />
       </div>
 
       <h2 class="title">📝 新增出入庫紀錄</h2>
-      <el-form :model="form" label-width="80px" @submit.prevent>
+      <el-form :model="form" label-position="top" @submit.prevent>
         <el-form-item label="商品">
           <el-select
             v-model="form.product_id"
             placeholder="請選擇商品"
-            style="width: 100%"
+            class="full-width"
           >
             <el-option
               v-for="p in products"
@@ -30,11 +31,19 @@
         </el-form-item>
 
         <el-form-item label="數量">
-          <el-input-number v-model="form.quantity" :min="1" />
+          <el-input-number
+            v-model="form.quantity"
+            :min="1"
+            class="full-width"
+          />
         </el-form-item>
 
         <el-form-item label="備註">
-          <el-input v-model="form.note" placeholder="可留空" />
+          <el-input
+            v-model="form.note"
+            placeholder="可留空"
+            class="full-width"
+          />
         </el-form-item>
 
         <el-form-item>
@@ -51,19 +60,15 @@
       </el-form>
     </el-card>
 
-    <el-card>
+    <!-- 篩選條件 -->
+    <el-card class="main-card" shadow="always">
       <h2 class="title">🔍 篩選條件</h2>
-      <el-form
-        :inline="true"
-        :model="filter"
-        class="filter-form"
-        label-width="60px"
-      >
+      <el-form :inline="false" label-position="top" :model="filter" class="filter-form">
         <el-form-item label="商品">
           <el-select
             v-model="filter.product_id"
             placeholder="全部商品"
-            style="width: 180px"
+            class="full-width"
           >
             <el-option label="全部商品" :value="''" />
             <el-option
@@ -75,38 +80,58 @@
           </el-select>
         </el-form-item>
         <el-form-item label="類型">
-          <el-select
-            v-model="filter.type"
-            placeholder="全部"
-            style="width: 120px"
-          >
+          <el-select v-model="filter.type" placeholder="全部" class="full-width">
             <el-option label="全部" value="" />
             <el-option label="入庫" value="in" />
             <el-option label="出庫" value="out" />
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button @click="resetFilter">清除篩選</el-button>
+          <el-button class="full-width" @click="resetFilter">
+            清除篩選
+          </el-button>
         </el-form-item>
       </el-form>
     </el-card>
 
-    <el-card>
+    <!-- 交易紀錄 -->
+    <el-card class="main-card" shadow="always">
       <h2 class="title">📑 最近交易紀錄</h2>
-      <el-table :data="filteredTransactions" border stripe style="width: 100%">
-        <el-table-column prop="timestamp" label="時間" width="180" />
-        <el-table-column prop="product_name" label="商品" />
-        <el-table-column prop="type" label="類型" width="80">
-          <template #default="{ row }">
+
+      <!-- 桌面版表格 -->
+      <div class="table-wrapper" v-if="!isMobile">
+        <el-table :data="filteredTransactions" border stripe style="width: 100%">
+          <el-table-column prop="timestamp" label="時間" width="180" />
+          <el-table-column prop="product_name" label="商品" />
+          <el-table-column prop="type" label="類型" width="80">
+            <template #default="{ row }">
+              <el-tag :type="row.type === 'in' ? 'success' : 'danger'">
+                {{ row.type === 'in' ? '入庫' : '出庫' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="quantity" label="數量" width="80" />
+          <el-table-column prop="note" label="備註" />
+          <el-table-column prop="operator" label="操作人" width="100" />
+        </el-table>
+      </div>
+
+      <!-- 手機版卡片 -->
+      <div class="transaction-cards" v-else>
+        <div v-for="row in filteredTransactions" :key="row.id" class="transaction-card">
+          <div><strong>時間：</strong>{{ row.timestamp }}</div>
+          <div><strong>商品：</strong>{{ row.product_name }}</div>
+          <div>
+            <strong>類型：</strong>
             <el-tag :type="row.type === 'in' ? 'success' : 'danger'">
-              {{ row.type === "in" ? "入庫" : "出庫" }}
+              {{ row.type === 'in' ? '入庫' : '出庫' }}
             </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="quantity" label="數量" width="80" />
-        <el-table-column prop="note" label="備註" />
-        <el-table-column prop="operator" label="操作人" width="100" />
-      </el-table>
+          </div>
+          <div><strong>數量：</strong>{{ row.quantity }}</div>
+          <div><strong>備註：</strong>{{ row.note || '-' }}</div>
+          <div><strong>操作人：</strong>{{ row.operator }}</div>
+        </div>
+      </div>
     </el-card>
   </div>
 </template>
@@ -130,6 +155,11 @@ const form = ref({
 const filter = ref({
   product_id: "",
   type: "",
+});
+
+const isMobile = ref(window.innerWidth <= 768);
+window.addEventListener("resize", () => {
+  isMobile.value = window.innerWidth <= 768;
 });
 
 const filteredTransactions = computed(() => {
@@ -200,10 +230,7 @@ function goBack() {
 .transaction-page {
   max-width: 1000px;
   margin: 40px auto;
-  padding: 2rem 1.5rem;
-  background: linear-gradient(135deg, #f5f7fa, #e4edf4);
-  border-radius: 16px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+  padding: 0 20px;
   display: flex;
   flex-direction: column;
   gap: 30px;
@@ -225,9 +252,17 @@ function goBack() {
 }
 
 .el-card {
-  border-radius: 12px;
   padding: 1.5rem;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.main-card {
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+  background-color: #ffffff;
+  border: 1px solid #ebeef5;
+  padding: 24px;
 }
 
 .filter-form {
@@ -254,11 +289,74 @@ function goBack() {
   border-radius: 8px;
 }
 
-.el-table th {
+.el-table th,
+.el-table td {
   text-align: center;
 }
 
-.el-table td {
-  text-align: center;
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.transaction-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.transaction-card {
+  padding: 16px;
+  border: 1px solid #ebeef5;
+  border-radius: 12px;
+  background: #f9f9f9;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+  .title {
+    font-size: 1.5rem;
+  }
+
+  .main-card {
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  .filter-form {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .el-form-item {
+    width: 100%;
+  }
+
+  .el-select,
+  .el-input,
+  .el-input-number,
+  .el-button {
+    width: 100% !important;
+  }
+
+  .el-table {
+    min-width: 600px;
+  }
+}
+
+@media (max-width: 480px) {
+  .title {
+    font-size: 1.3rem;
+  }
+
+  .el-button {
+    font-size: 14px;
+  }
+
+  .el-form-item__label {
+    font-size: 14px;
+  }
 }
 </style>

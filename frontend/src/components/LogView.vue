@@ -1,6 +1,6 @@
 <template>
   <div class="log-page">
-    <el-card>
+    <el-card class="main-card" shadow="always">
       <div class="header">
         <el-page-header content="📝 操作紀錄" @back="goBack" />
         <el-select
@@ -22,7 +22,8 @@
 
       <h2 class="title">📋 操作紀錄一覽</h2>
 
-      <el-table :data="filteredLogs" style="width: 100%" border stripe>
+      <!-- 桌面版 Table -->
+      <el-table v-if="!isMobile" :data="filteredLogs" style="width: 100%" border stripe>
         <el-table-column prop="timestamp" label="時間" width="180" />
         <el-table-column prop="username" label="操作人" width="120" />
         <el-table-column prop="action" label="操作行為" width="150" />
@@ -33,13 +34,27 @@
               <template #reference>
                 <el-button size="small" text type="primary">查看原始 JSON</el-button>
               </template>
-              <pre class="json-view">
-                {{ formatDetails(row.details) }}
-              </pre>
+              <pre class="json-view">{{ formatDetails(row.details) }}</pre>
             </el-popover>
           </template>
         </el-table-column>
       </el-table>
+
+      <!-- 📱 手機版卡片 -->
+      <div v-else class="log-cards">
+        <div v-for="row in filteredLogs" :key="row.id" class="log-card">
+          <div><strong>時間：</strong>{{ row.timestamp }}</div>
+          <div><strong>操作人：</strong>{{ row.username }}</div>
+          <div><strong>行為：</strong>{{ row.action }}</div>
+          <div><strong>細節：</strong>{{ summarize(row) }}</div>
+          <el-popover trigger="click" placement="bottom">
+            <template #reference>
+              <el-button size="small" text type="primary">查看原始 JSON</el-button>
+            </template>
+            <pre class="json-view">{{ formatDetails(row.details) }}</pre>
+          </el-popover>
+        </div>
+      </div>
     </el-card>
   </div>
 </template>
@@ -54,6 +69,11 @@ const logs = ref([])
 const selectedAction = ref('')
 const auth = useAuthStore()
 const router = useRouter()
+
+const isMobile = ref(window.innerWidth <= 768)
+window.addEventListener('resize', () => {
+  isMobile.value = window.innerWidth <= 768
+})
 
 function goBack() {
   router.push('/')
@@ -81,7 +101,7 @@ function summarize(row) {
       case 'add_transaction':
         return `📦 商品「${d.productName}」${d.type === 'in' ? '入庫' : '出庫'} ${d.quantity}`
       case 'update_permissions':
-        return `🛂 修改使用者「${d.username}」權限為 ${d.newRole}`
+        return `🛢 修改使用者「${d.username}」權限為 ${d.newRole}`
       case 'login_success':
         return `🔑 使用者「${d.username}」登入成功`
       case 'register_user':
@@ -128,7 +148,18 @@ onMounted(fetchLogs)
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
   margin-bottom: 20px;
+}
+
+.main-card {
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+  background-color: #ffffff;
+  border: 1px solid #ebeef5;
+  padding: 24px;
 }
 
 .action-filter {
@@ -147,5 +178,22 @@ onMounted(fetchLogs)
   max-width: 600px;
   font-size: 0.9rem;
   line-height: 1.4;
+}
+
+/* 📱 手機版 RWD 卡片樣式 */
+.log-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.log-card {
+  padding: 16px;
+  border: 1px solid #ebeef5;
+  border-radius: 12px;
+  background: #f9f9f9;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  font-size: 14px;
 }
 </style>

@@ -48,7 +48,13 @@ button {
   cursor: pointer;
 }
 
-.container {
+/* ================================
+  💻 桌面版樣式
+================================ */
+body.is-desktop {
+}
+
+body.is-desktop .container {
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
@@ -58,22 +64,89 @@ button {
   transition: box-shadow 0.3s ease;
 }
 
-.container:hover {
+body.is-desktop .container:hover {
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
 }
 
-@media (max-width: 768px) {
-  body {
-    font-size: 95%;
-  }
-  .container {
-    padding: 30px 20px;
-    margin: 40px 20px;
-  }
+/* ================================
+  📱 手機版樣式（完全分離）
+================================ */
+body.is-mobile .container,
+body.is-mobile .main-card,
+body.is-mobile .el-card {
+  padding: 16px !important;
+  border-radius: 12px;
 }
 
-@media (max-width: 480px) {
-  body {
-    font-size: 90%;
-  }
+body.is-mobile .title {
+  font-size: 1.5rem;
+  text-align: center;
+}
+
+body.is-mobile .stat-cards {
+  grid-template-columns: repeat(1, 1fr);
+}
+
+body.is-mobile .action-bar,
+body.is-mobile .filter-form {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
+}
+
+body.is-mobile .search-input,
+body.is-mobile .category-select,
+body.is-mobile .full-width,
+body.is-mobile .el-select,
+body.is-mobile .el-input {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+body.is-mobile .el-button {
+  width: 100%;
+}
+
+body.is-mobile .el-table {
+  font-size: 13px;
+  display: block;
+  overflow-x: auto;
+}
+
+body.is-mobile .el-table__header,
+body.is-mobile .el-table__body {
+  width: max-content;
+  min-width: 600px;
+}
+
+body.is-mobile .pagination {
+  font-size: 14px;
+  margin-top: 1rem;
+}
+
+body.is-mobile .title {
+  font-size: 1.3rem;
+}
+
+body.is-mobile .stat-value {
+  font-size: 1.2rem;
+}
+body.is-mobile .stat-title {
+  font-size: 0.9rem;
+}
+
+body.is-mobile .el-dialog {
+  width: 90% !important;
+}
+
+body.is-mobile .category-chip {
+  font-size: 0.85rem;
+  padding: 4px 10px;
+}
+
+body.is-mobile .el-form-item__label,
+body.is-mobile .el-button,
+body.is-mobile .el-input,
+body.is-mobile .el-select {
+  font-size: 14px;
 }

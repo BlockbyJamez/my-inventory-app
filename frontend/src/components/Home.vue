@@ -129,4 +129,32 @@ function handleLogout() {
   border: 1px solid #f56c6c;
   color: #f56c6c;
 }
+
+/* 📱 手機版 RWD */
+body.is-mobile .home-container {
+  padding: 1.2rem 1rem;
+}
+
+body.is-mobile .title {
+  font-size: 1.6rem;
+  margin-bottom: 24px;
+}
+
+body.is-mobile .grid-menu {
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+body.is-mobile .menu-card {
+  padding: 20px 8px;
+}
+
+body.is-mobile .card-icon {
+  font-size: 2rem;
+  margin-bottom: 8px;
+}
+
+body.is-mobile .card-text {
+  font-size: 1rem;
+}
 </style>
