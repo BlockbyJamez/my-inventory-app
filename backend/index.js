@@ -34,15 +34,16 @@ app.use("/uploads", express.static(uploadDir));
 // === 資料庫連線 ===
 const db = new Database('MYDB.db');
 
-// === 操作紀錄工具函式 ===
+// ✅ 改為同步執行的操作紀錄工具函式
 function logAction(username, action, details = null) {
-  db.run(
-    `INSERT INTO logs (username, action, details) VALUES (?, ?, ?)`,
-    [username, action, details ? JSON.stringify(details) : null],
-    (err) => {
-      if (err) console.error("❌ 操作紀錄寫入失敗:", err);
-    }
-  );
+  try {
+    db.prepare(`
+      INSERT INTO logs (username, action, details)
+      VALUES (?, ?, ?)
+    `).run(username, action, details ? JSON.stringify(details) : null);
+  } catch (err) {
+    console.error("❌ 操作紀錄寫入失敗:", err);
+  }
 }
 
 // === 健康檢查 API ===
@@ -65,89 +66,106 @@ function checkAdmin(req, res, next) {
 
 // === Product APIs ===
 app.get("/products", (req, res) => {
-  db.all(`SELECT * FROM products`, (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
+  try {
+    const rows = db.prepare(`SELECT * FROM products`).all();
     res.json(rows);
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.get("/products/:id", (req, res) => {
-  db.get(`SELECT * FROM products WHERE id = ?`, [req.params.id], (err, row) => {
-    if (err) return res.status(500).json({ error: err.message });
+  try {
+    const row = db.prepare(`SELECT * FROM products WHERE id = ?`).get(req.params.id);
     if (row) res.json(row);
     else res.status(404).json({ error: "Product not found" });
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post("/products", checkAdmin, (req, res) => {
   const { name, stock, price, category, description, image } = req.body;
   const username = req.headers["x-username"] || "unknown";
 
-  db.run(
-    `INSERT INTO products (name, stock, price, category, description, image) VALUES (?, ?, ?, ?, ?, ?)`,
-    [name, stock, price, category, description, image],
-    function (err) {
-      if (err) return res.status(500).json({ error: err.message });
+  try {
+    const stmt = db.prepare(`
+      INSERT INTO products (name, stock, price, category, description, image)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+    const result = stmt.run(name, stock, price, category, description, image);
 
-      logAction(username, "add_product", { id: this.lastID, name });
-      res.status(201).json({
-        id: this.lastID,
-        name,
-        stock,
-        price,
-        category,
-        description,
-        image,
-      });
-    }
-  );
+    logAction(username, "add_product", { id: result.lastInsertRowid, name });
+
+    res.status(201).json({
+      id: result.lastInsertRowid,
+      name,
+      stock,
+      price,
+      category,
+      description,
+      image,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.put("/products/:id", checkAdmin, (req, res) => {
   const { name, stock, price, category, description, image } = req.body;
   const username = req.headers["x-username"] || "unknown";
 
-  db.run(
-    `UPDATE products SET name = ?, stock = ?, price = ?, category = ?, description = ?, image = ? WHERE id = ?`,
-    [name, stock, price, category, description, image, req.params.id],
-    function (err) {
-      if (err) return res.status(500).json({ error: err.message });
-      if (this.changes === 0)
-        return res.status(404).json({ error: "Product not found" });
+  try {
+    const stmt = db.prepare(`
+      UPDATE products
+      SET name = ?, stock = ?, price = ?, category = ?, description = ?, image = ?
+      WHERE id = ?
+    `);
+    const result = stmt.run(name, stock, price, category, description, image, req.params.id);
 
-      logAction(username, "update_product", {
-        id: Number(req.params.id),
-        name,
-        stock,
-        price,
-        category,
-        description,
-        image,
-      });
-      res.json({
-        id: Number(req.params.id),
-        name,
-        stock,
-        price,
-        category,
-        description,
-        image,
-      });
+    if (result.changes === 0) {
+      return res.status(404).json({ error: "Product not found" });
     }
-  );
+
+    logAction(username, "update_product", {
+      id: Number(req.params.id),
+      name,
+      stock,
+      price,
+      category,
+      description,
+      image,
+    });
+
+    res.json({
+      id: Number(req.params.id),
+      name,
+      stock,
+      price,
+      category,
+      description,
+      image,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.delete("/products/:id", checkAdmin, (req, res) => {
   const username = req.headers["x-username"] || "unknown";
 
-  db.run(`DELETE FROM products WHERE id = ?`, [req.params.id], function (err) {
-    if (err) return res.status(500).json({ error: err.message });
-    if (this.changes === 0)
+  try {
+    const result = db.prepare(`DELETE FROM products WHERE id = ?`).run(req.params.id);
+
+    if (result.changes === 0) {
       return res.status(404).json({ error: "Product not found" });
+    }
 
     logAction(username, "delete_product", { id: Number(req.params.id) });
     res.json({ id: Number(req.params.id) });
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post("/upload", upload.single("image"), (req, res) => {
@@ -157,12 +175,13 @@ app.post("/upload", upload.single("image"), (req, res) => {
 });
 
 // === Auth APIs ===
-app.post("/api/login", (req, res, next) => {
+app.post("/api/login", (req, res) => {
   const { username, password } = req.body;
-  if (!username || !password) return res.status(400).json({ error: "帳號與密碼不得為空" });
+  if (!username || !password)
+    return res.status(400).json({ error: "帳號與密碼不得為空" });
 
-  db.get(`SELECT * FROM users WHERE username = ? AND password = ?`, [username, password], (err, row) => {
-    if (err) return next(err);
+  try {
+    const row = db.prepare(`SELECT * FROM users WHERE username = ? AND password = ?`).get(username, password);
 
     if (row) {
       logAction(username, "login_success", { username });
@@ -170,7 +189,9 @@ app.post("/api/login", (req, res, next) => {
     } else {
       res.status(401).json({ error: "帳號或密碼錯誤" });
     }
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post("/api/register", (req, res) => {
@@ -178,59 +199,60 @@ app.post("/api/register", (req, res) => {
   if (!username || !password || !email)
     return res.status(400).json({ error: "帳號、密碼與信箱不得為空" });
 
-  const sql = `INSERT INTO users (username, password, email, role) VALUES (?, ?, ?, 'viewer')`;
-  db.run(sql, [username, password, email], function (err) {
-    if (err) {
-      if (err.message.includes("UNIQUE constraint failed"))
-        return res.status(409).json({ error: "帳號已存在" });
-      return res.status(500).json({ error: "伺服器錯誤" });
-    }
+  try {
+    const stmt = db.prepare(`INSERT INTO users (username, password, email, role) VALUES (?, ?, ?, 'viewer')`);
+    const result = stmt.run(username, password, email);
 
     logAction(username, "register_user", { username });
-    res.status(201).json({ success: true, userId: this.lastID });
-  });
+    res.status(201).json({ success: true, userId: result.lastInsertRowid });
+  } catch (err) {
+    if (err.message.includes("UNIQUE constraint failed")) {
+      return res.status(409).json({ error: "帳號已存在" });
+    }
+    res.status(500).json({ error: "伺服器錯誤" });
+  }
 });
 
 app.post("/api/forgot-password", (req, res) => {
   const { identifier } = req.body;
   if (!identifier) return res.status(400).json({ error: "請提供帳號" });
-  db.get(
-    `SELECT * FROM users WHERE username = ?`,
-    [identifier],
-    (err, user) => {
-      if (err || !user) return res.status(404).json({ error: "查無此帳號" });
 
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
-      const expires = Date.now() + 60 * 1000;
+  try {
+    const user = db.prepare(`SELECT * FROM users WHERE username = ?`).get(identifier);
+    if (!user) return res.status(404).json({ error: "查無此帳號" });
 
-      const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-          user: "danny90628@gmail.com",
-          pass: "dnndvufcudqjdckn",
-        },
-      });
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires = Date.now() + 60 * 1000;
 
-      const mailOptions = {
-        from: '"MY系統客服" <danny90628@gmail.com>',
-        to: user.email,
-        subject: "密碼重設驗證碼",
-        text: `您好，您的驗證碼為：${code}，1 分鐘內有效。\n帳號：${user.username}`,
-      };
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: "danny90628@gmail.com",
+        pass: "dnndvufcudqjdckn",
+      },
+    });
 
-      transporter.sendMail(mailOptions, (error) => {
-        if (error) return res.status(500).json({ error: "寄信失敗" });
-        db.run(
-          `UPDATE users SET email_verification_code = ?, email_code_expires = ? WHERE id = ?`,
-          [code, expires, user.id],
-          (err) => {
-            if (err) return res.status(500).json({ error: "驗證碼儲存失敗" });
-            res.json({ message: "已發送驗證碼至註冊信箱" });
-          }
-        );
-      });
-    }
-  );
+    const mailOptions = {
+      from: '"MY系統客服" <danny90628@gmail.com>',
+      to: user.email,
+      subject: "密碼重設驗證碼",
+      text: `您好，您的驗證碼為：${code}，1 分鐘內有效。\n帳號：${user.username}`,
+    };
+
+    transporter.sendMail(mailOptions, (error) => {
+      if (error) return res.status(500).json({ error: "寄信失敗" });
+
+      db.prepare(`
+        UPDATE users
+        SET email_verification_code = ?, email_code_expires = ?
+        WHERE id = ?
+      `).run(code, expires, user.id);
+
+      res.json({ message: "已發送驗證碼至註冊信箱" });
+    });
+  } catch (err) {
+    res.status(500).json({ error: "查詢使用者失敗" });
+  }
 });
 
 app.post("/api/verify-code", (req, res) => {
@@ -238,15 +260,20 @@ app.post("/api/verify-code", (req, res) => {
   if (!username || !code)
     return res.status(400).json({ error: "缺少帳號或驗證碼" });
 
-  db.get(
-    `SELECT * FROM users WHERE username = ? AND email_verification_code = ? AND email_code_expires > ?`,
-    [username, code, Date.now()],
-    (err, user) => {
-      if (err || !user)
-        return res.status(400).json({ error: "驗證碼錯誤或已過期" });
-      res.json({ message: "驗證成功，請繼續設定新密碼", token: code });
+  try {
+    const user = db.prepare(`
+      SELECT * FROM users
+      WHERE username = ? AND email_verification_code = ? AND email_code_expires > ?
+    `).get(username, code, Date.now());
+
+    if (!user) {
+      return res.status(400).json({ error: "驗證碼錯誤或已過期" });
     }
-  );
+
+    res.json({ message: "驗證成功，請繼續設定新密碼", token: code });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post("/api/reset-password", (req, res) => {
@@ -254,37 +281,44 @@ app.post("/api/reset-password", (req, res) => {
   if (!code || !newPassword)
     return res.status(400).json({ error: "缺少驗證碼或新密碼" });
 
-  db.get(
-    `SELECT * FROM users WHERE email_verification_code = ? AND email_code_expires > ?`,
-    [code, Date.now()],
-    (err, user) => {
-      if (err || !user)
-        return res.status(400).json({ error: "驗證碼錯誤或已過期" });
+  try {
+    const user = db.prepare(`
+      SELECT * FROM users
+      WHERE email_verification_code = ? AND email_code_expires > ?
+    `).get(code, Date.now());
 
-      db.run(
-        `UPDATE users SET password = ?, email_verification_code = NULL, email_code_expires = NULL WHERE id = ?`,
-        [newPassword, user.id],
-        (err) => {
-          if (err) return res.status(500).json({ error: "更新密碼失敗" });
-          res.json({ message: "密碼重設成功，請重新登入" });
-        }
-      );
+    if (!user) {
+      return res.status(400).json({ error: "驗證碼錯誤或已過期" });
     }
-  );
+
+    db.prepare(`
+      UPDATE users
+      SET password = ?, email_verification_code = NULL, email_code_expires = NULL
+      WHERE id = ?
+    `).run(newPassword, user.id);
+
+    res.json({ message: "密碼重設成功，請重新登入" });
+  } catch (err) {
+    res.status(500).json({ error: "更新密碼失敗" });
+  }
 });
 
 // === 日誌查詢 API ===
 app.get("/logs", checkAdmin, (req, res) => {
-  db.all(
-    `SELECT id, username, action, details, timestamp FROM logs ORDER BY timestamp DESC LIMIT 100`,
-    (err, rows) => {
-      if (err) return res.status(500).json({ error: "查詢失敗" });
-      res.json(rows);
-    }
-  );
+  try {
+    const rows = db.prepare(`
+      SELECT id, username, action, details, timestamp
+      FROM logs
+      ORDER BY timestamp DESC
+      LIMIT 100
+    `).all();
+
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: "查詢失敗" });
+  }
 });
 
-// === 出入庫 APIs ===
 app.post("/transactions", checkAdmin, (req, res) => {
   const { product_id, type, quantity, note } = req.body;
   const operator = req.headers["x-username"] || "unknown";
@@ -293,61 +327,68 @@ app.post("/transactions", checkAdmin, (req, res) => {
     return res.status(400).json({ error: "參數錯誤" });
   }
 
-  const updateSql = type === "in"
-    ? `UPDATE products SET stock = stock + ? WHERE id = ?`
-    : `UPDATE products SET stock = stock - ? WHERE id = ? AND stock >= ?`;
+  try {
+    const productRow = db.prepare(`SELECT name FROM products WHERE id = ?`).get(product_id);
+    const productName = productRow?.name || `ID ${product_id}`;
 
-  const updateParams = type === "in"
-    ? [quantity, product_id]
-    : [quantity, product_id, quantity];
+    const updateStmt = type === "in"
+      ? db.prepare(`UPDATE products SET stock = stock + ? WHERE id = ?`)
+      : db.prepare(`UPDATE products SET stock = stock - ? WHERE id = ? AND stock >= ?`);
 
-  db.get(`SELECT name FROM products WHERE id = ?`, [product_id], (err, row) => {
-    const productName = row?.name || `ID ${product_id}`;
+    const result = type === "in"
+      ? updateStmt.run(quantity, product_id)
+      : updateStmt.run(quantity, product_id, quantity);
 
-    db.run(updateSql, updateParams, function (err) {
-      if (err) return res.status(500).json({ error: "更新庫存失敗" });
-      if (this.changes === 0) return res.status(400).json({ error: "庫存不足或商品不存在" });
+    if (result.changes === 0) {
+      return res.status(400).json({ error: "庫存不足或商品不存在" });
+    }
 
-      db.run(
-        `INSERT INTO transactions (product_id, type, quantity, note, operator) VALUES (?, ?, ?, ?, ?)`,
-        [product_id, type, quantity, note, operator],
-        function (err) {
-          if (err) return res.status(500).json({ error: "交易紀錄新增失敗" });
+    const insertStmt = db.prepare(`
+      INSERT INTO transactions (product_id, type, quantity, note, operator)
+      VALUES (?, ?, ?, ?, ?)
+    `);
+    const info = insertStmt.run(product_id, type, quantity, note, operator);
 
-          logAction(operator, "add_transaction", {
-            product_id,
-            type,
-            quantity,
-            productName
-          });
-
-          res.status(201).json({ success: true, transaction_id: this.lastID });
-        }
-      );
+    logAction(operator, "add_transaction", {
+      product_id,
+      type,
+      quantity,
+      productName
     });
-  });
+
+    res.status(201).json({ success: true, transaction_id: info.lastInsertRowid });
+
+  } catch (err) {
+    console.error("❌ 出入庫處理錯誤:", err);
+    res.status(500).json({ error: "處理失敗" });
+  }
 });
 
 app.get("/transactions", (req, res) => {
-  db.all(`
-    SELECT t.*, p.name AS product_name
-    FROM transactions t
-    JOIN products p ON t.product_id = p.id
-    ORDER BY t.timestamp DESC
-  `, (err, rows) => {
-    if (err) return res.status(500).json({ error: "查詢失敗" });
+  try {
+    const rows = db.prepare(`
+      SELECT t.*, p.name AS product_name
+      FROM transactions t
+      JOIN products p ON t.product_id = p.id
+      ORDER BY t.timestamp DESC
+    `).all();
+
     res.json(rows);
-  });
+  } catch (err) {
+    res.status(500).json({ error: "查詢失敗" });
+  }
 });
 
 // === 使用者權限管理 APIs（僅限 admin） ===
 
 // 查詢所有使用者（不包含密碼與驗證碼等機密資訊）
 app.get("/users", checkAdmin, (req, res) => {
-  db.all(`SELECT id, username, email, role FROM users`, (err, rows) => {
-    if (err) return res.status(500).json({ error: "查詢使用者失敗" });
-    res.json(rows);
-  });
+  try {
+    const users = db.prepare(`SELECT id, username, email, role FROM users`).all();
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: "查詢使用者失敗" });
+  }
 });
 
 // 修改指定使用者的角色
@@ -360,25 +401,31 @@ app.put("/users/:id/role", checkAdmin, (req, res) => {
     return res.status(400).json({ error: "角色不合法" });
   }
 
-  db.get(`SELECT username FROM users WHERE id = ?`, [req.params.id], (err, row) => {
-    if (err || !row) return res.status(404).json({ error: "找不到使用者" });
+  try {
+    const userRow = db.prepare(`SELECT username FROM users WHERE id = ?`).get(req.params.id);
+    if (!userRow) {
+      return res.status(404).json({ error: "找不到使用者" });
+    }
 
-    if (row.username === currentUser && role !== "admin") {
+    if (userRow.username === currentUser && role !== "admin") {
       return res.status(403).json({ error: "不能將自己的權限改為 viewer" });
     }
 
-    db.run(`UPDATE users SET role = ? WHERE id = ?`, [role, req.params.id], function (err) {
-      if (err) return res.status(500).json({ error: "更新角色失敗" });
-      if (this.changes === 0) return res.status(404).json({ error: "找不到使用者" });
+    const result = db.prepare(`UPDATE users SET role = ? WHERE id = ?`).run(role, req.params.id);
+    if (result.changes === 0) {
+      return res.status(404).json({ error: "找不到使用者" });
+    }
 
-      logAction(currentUser, "update_permissions", {
-        username: row.username,
-        newRole: role
-      });
-
-      res.json({ success: true });
+    logAction(currentUser, "update_permissions", {
+      username: userRow.username,
+      newRole: role
     });
-  });
+
+    res.json({ success: true });
+
+  } catch (err) {
+    res.status(500).json({ error: "更新角色失敗" });
+  }
 });
 
 // === 全域錯誤處理（最底層一定要放） ===
