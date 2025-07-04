@@ -7,7 +7,6 @@ import fs from "fs";
 import nodemailer from "nodemailer";
 import timeout from "connect-timeout";
 
-sqlite3.verbose();
 const app = express();
 const port = 3000;
 
