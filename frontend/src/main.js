@@ -5,7 +5,7 @@ import 'element-plus/dist/index.css'
 import './style.css'
 
 import { createPinia } from 'pinia'
-import router from './router'
+import router from './router/routes'
 
 const app = createApp(App)
 app.use(ElementPlus)
