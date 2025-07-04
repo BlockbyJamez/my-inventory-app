@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import sqlite3 from "sqlite3";
+import Database from 'better-sqlite3';
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -32,7 +32,7 @@ const upload = multer({ storage });
 app.use("/uploads", express.static(uploadDir));
 
 // === 資料庫連線 ===
-const db = new sqlite3.Database("MYDB.db");
+const db = new Database('MYDB.db');
 
 // === 操作紀錄工具函式 ===
 function logAction(username, action, details = null) {
