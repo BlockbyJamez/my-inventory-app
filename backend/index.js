@@ -14,7 +14,6 @@ const port = 3000;
 app.use(cors());
 app.use(express.json());
 app.use(timeout("10s"));
-// trigger render deploy
 
 // === 檔案上傳資料夾準備 ===
 const uploadDir = "uploads";
