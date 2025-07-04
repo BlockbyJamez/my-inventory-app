@@ -437,8 +437,3 @@ app.use((err, req, res, next) => {
   if (res.headersSent) return next(err);
   res.status(500).json({ error: "系統內部錯誤" });
 });
-
-// === 啟動伺服器 ===
-app.listen(port, () => {
-  console.log(`✅ Backend running on http://localhost:${port}`);
-});
