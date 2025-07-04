@@ -8,7 +8,11 @@ import nodemailer from "nodemailer";
 import timeout from "connect-timeout";
 
 const app = express();
-const port = 3000;
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log(`✅ Backend running on http://localhost:${PORT}`);
+});
 
 // === Middleware 設定 ===
 app.use(cors());
